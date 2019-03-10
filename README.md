@@ -24,13 +24,13 @@ Joanna Duran, Nikhil Gupta, Max Moro
 * However, we dont know ahead of time which points belong to high Cook's D group and which to the low Cook's D group. Hence in this approach, we will first label the points as High Cook's D or Low Cook's D observation after running a basic linear regression model.
 * Using this label, we will perform LDA/QDA/Logistic Regression to train a model to predict the right group for a new observation
  * Finally, we will add the predicted group (from LDA/QDA/Logistic Regression) as a feature into the linear model for predicting the value of the output variable.
- * In a way this is a 2 step machine learning model - first cluster the incoming observation into clusters and then use the cluster information as a predictor in the final model to improve its fit.
+ * In a way this is a 2 step machine learning model - first cluster the incoming observation and then use the cluster information as a predictor in the final model to improve its fit.
   
 ## Dataset
-* Description can be found in Project 1: https://github.com/ngupta23/MSDS-6372-Project1/blob/master/README.md 
+* Description can be found in Project 1 [README](https://github.com/ngupta23/MSDS-6372-Project1/blob/master/README.md) file
 
 ## Files
-* Description can be found in Project 1: https://github.com/ngupta23/MSDS-6372-Project1/blob/master/README.md
+* Description can be found in Project 1 [README](https://github.com/ngupta23/MSDS-6372-Project1/blob/master/README.md) file
   
 ## Goals:
 * Improve the model fit from Project 1 utilizing the concepts learned in the second half od the course, specifically
