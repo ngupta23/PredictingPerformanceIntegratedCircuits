@@ -2,4 +2,8 @@
 .Rhistory
 .RData
 .Ruserdata
-.desktop.ini
+desktop.ini
+*/.Rproj.user
+.RData
+*/*.RData
+*_cache
