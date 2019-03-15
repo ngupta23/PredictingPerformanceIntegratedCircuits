@@ -270,14 +270,46 @@ label.names=output.var.tr
 
 # Modeling
 
+## PCA
+
+
+```{r PCA}
+data = data[sample(nrow(data)),] # randomly shuffle data
+pca.vars  = names(data)
+pca.vars = pca.vars[!pca.vars %in% label.names]
+#pca.model =  preProcess(data[,pca.vars], method = "pca")
+#data.pca = predict(pca.model,data)
+#eigenVectors = pca.model$rotation
+targetCumVar = .8
+pca.model = prcomp(data[,pca.vars],center=T,scale.=T,retx = T)
+pca.model$var = pca.model$sdev ^ 2 #eigenvalues
+pca.model$pvar = pca.model$var / sum(pca.model$var)
+pca.model$cumpvar = cumsum(pca.model$pvar )
+pca.model$pcaSel = pca.model$cumpvar<=targetCumVar
+pca.model$pcaSelCount = sum(pca.model$pcaSel)
+pca.model$pcaSelTotVar = sum(pca.model$pvar[pca.model$pcaSel])
+message(pca.model$pcaSelCount, " PCAs justify ",percent(targetCumVar)," of the total Variance. (",percent(pca.model$pcaSelTotVar),")")
+plot(pca.model$var,xlab="Principal component", ylab="Proportion of variance explained",   type='b')
+plot(cumsum(pca.model$pvar ),xlab="Principal component", ylab="Cumulative Proportion of variance explained", ylim=c(0,1), type='b')
+screeplot(pca.model,npcs = pca.model$pcaSelCount)
+screeplot(pca.model,npcs = pca.model$pcaSelCount,type='lines')
+summary(pca.model)
+pca.model$rotation
+#creating dataset
+data.pca = dplyr::select(data,!!label.names) %>% 
+  dplyr::bind_cols(dplyr::select(as.data.frame(pca.model$x)
+                                 ,!!colnames(pca.model$rotation)[pca.model$pcaSel])
+  )
+```
+
 ##  Train Test Split
 
 ```{r Train Test Split}
-data = data[sample(nrow(data)),] # randomly shuffle data
-split = sample.split(data[,label.names], SplitRatio = 0.8)
+data.pca = data[sample(nrow(data.pca)),] # randomly shuffle data
+split = sample.split(data.pca[,label.names], SplitRatio = 0.8)
 
-data.train = subset(data, split == TRUE)
-data.test = subset(data, split == FALSE)
+data.train = subset(data.pca$data, split == TRUE)
+data.test = subset(data.pca, split == FALSE)
 ```
 
 ## Common Functions
@@ -362,6 +394,8 @@ setCaretSeeds <- function(method = "cv", numbers = 1, repeats = 1, tunes = NULL,
   # return seeds
   seeds
 }
+
+
 
 train.caret.glmselect = function(formula, data, method
                                  ,subopt = NULL, feature.names
