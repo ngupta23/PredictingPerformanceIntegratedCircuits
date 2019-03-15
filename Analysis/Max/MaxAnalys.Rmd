@@ -294,7 +294,7 @@ plot(cumsum(pca.model$pvar ),xlab="Principal component", ylab="Cumulative Propor
 screeplot(pca.model,npcs = pca.model$pcaSelCount)
 screeplot(pca.model,npcs = pca.model$pcaSelCount,type='lines')
 summary(pca.model)
-pca.model$rotation
+#pca.model$rotation
 #creating dataset
 data.pca = dplyr::select(data,!!label.names) %>% 
   dplyr::bind_cols(dplyr::select(as.data.frame(pca.model$x)
@@ -308,8 +308,8 @@ data.pca = dplyr::select(data,!!label.names) %>%
 data.pca = data[sample(nrow(data.pca)),] # randomly shuffle data
 split = sample.split(data.pca[,label.names], SplitRatio = 0.8)
 
-data.train = subset(data.pca$data, split == TRUE)
-data.test = subset(data.pca, split == FALSE)
+data.train = subset(data.pca, split == TRUE)
+data.test = subsQet(data.pca, split == FALSE)
 ```
 
 ## Common Functions
@@ -695,7 +695,7 @@ high.cd = names(cd.full[cd.full > 4/nrow(data.train)])
 t = data.train %>% 
   rownames_to_column() %>%
   mutate(high.cd = ifelse(rowname %in% high.cd,1,0))
-write.csv(t,file='data_high_cd_flag.csv',row.names = F)
+#write.csv(t,file='data_high_cd_flag.csv',row.names = F)
 ###
 data.train2 = data.train[!(rownames(data.train)) %in% high.cd,]
 model.full2 = lm(formula , data.train2)
