@@ -309,7 +309,7 @@ data.pca = data[sample(nrow(data.pca)),] # randomly shuffle data
 split = sample.split(data.pca[,label.names], SplitRatio = 0.8)
 
 data.train = subset(data.pca, split == TRUE)
-data.test = subsQet(data.pca, split == FALSE)
+data.test = subset(data.pca, split == FALSE)
 ```
 
 ## Common Functions
