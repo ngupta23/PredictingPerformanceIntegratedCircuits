@@ -274,14 +274,19 @@ label.names=output.var.tr
 
 
 ```{r PCA}
-data = data[sample(nrow(data)),] # randomly shuffle data
+fullInteraction=0
+
 pca.vars  = names(data)
 pca.vars = pca.vars[!pca.vars %in% label.names]
-#pca.model =  preProcess(data[,pca.vars], method = "pca")
-#data.pca = predict(pca.model,data)
-#eigenVectors = pca.model$rotation
+
+if(fullInteraction){
+  pca.formula =as.formula(paste0('~(',paste0(pca.vars, collapse ='+'),')^2'))
+  pca.model = prcomp(formula=pca.formula,data=data[,pca.vars],center=T,scale.=T,retx = T)
+} else {
+  pca.model =  prcomp(x=data[,pca.vars],center=T,scale.=T,retx = T)
+}
 targetCumVar = .8
-pca.model = prcomp(data[,pca.vars],center=T,scale.=T,retx = T)
+
 pca.model$var = pca.model$sdev ^ 2 #eigenvalues
 pca.model$pvar = pca.model$var / sum(pca.model$var)
 pca.model$cumpvar = cumsum(pca.model$pvar )
