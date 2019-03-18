@@ -7,3 +7,4 @@ desktop.ini
 .RData
 */*.RData
 *_cache
+*.rds

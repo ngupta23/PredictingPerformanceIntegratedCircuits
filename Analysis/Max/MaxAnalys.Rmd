@@ -273,8 +273,8 @@ label.names=output.var.tr
 ## PCA
 
 
-```{r PCA}
-fullInteraction=0
+```{r PCA,cache=T}
+fullInteraction=1
 
 pca.vars  = names(data)
 pca.vars = pca.vars[!pca.vars %in% label.names]
@@ -282,6 +282,7 @@ pca.vars = pca.vars[!pca.vars %in% label.names]
 if(fullInteraction){
   pca.formula =as.formula(paste0('~(',paste0(pca.vars, collapse ='+'),')^2'))
   pca.model = prcomp(formula=pca.formula,data=data[,pca.vars],center=T,scale.=T,retx = T)
+  #saveRDS(pca.model,'pca.model.rds')
 } else {
   pca.model =  prcomp(x=data[,pca.vars],center=T,scale.=T,retx = T)
 }
@@ -298,7 +299,7 @@ plot(pca.model$var,xlab="Principal component", ylab="Proportion of variance expl
 plot(cumsum(pca.model$pvar ),xlab="Principal component", ylab="Cumulative Proportion of variance explained", ylim=c(0,1), type='b')
 screeplot(pca.model,npcs = pca.model$pcaSelCount)
 screeplot(pca.model,npcs = pca.model$pcaSelCount,type='lines')
-summary(pca.model)
+#summary(pca.model)
 #pca.model$rotation
 #creating dataset
 data.pca = dplyr::select(data,!!label.names) %>% 
