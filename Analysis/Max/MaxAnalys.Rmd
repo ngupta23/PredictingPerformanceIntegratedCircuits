@@ -273,7 +273,7 @@ label.names=output.var.tr
 ## PCA
 
 
-```{r PCA,cache=T}
+```{r PCA}
 fullInteraction=1
 
 pca.vars  = names(data)
