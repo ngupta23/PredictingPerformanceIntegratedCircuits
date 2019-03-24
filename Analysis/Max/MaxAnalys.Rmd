@@ -272,10 +272,8 @@ label.names=output.var.tr
 
 ## PCA
 
-
 ```{r PCA}
-fullInteraction=1
-
+fullInteraction=TRUE
 pca.vars  = names(data)
 pca.vars = pca.vars[!pca.vars %in% label.names]
 
@@ -311,7 +309,7 @@ data.pca = dplyr::select(data,!!label.names) %>%
 ##  Train Test Split
 
 ```{r Train Test Split}
-data.pca = data[sample(nrow(data.pca)),] # randomly shuffle data
+data.pca = data.pca[sample(nrow(data.pca)),] # randomly shuffle data
 split = sample.split(data.pca[,label.names], SplitRatio = 0.8)
 
 data.train = subset(data.pca, split == TRUE)
