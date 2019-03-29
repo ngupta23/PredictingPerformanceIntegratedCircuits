@@ -12,7 +12,8 @@ output:
    reference_docx: word_template.docx
 params:
   output.var: 'y3'
-  log.pred: TRUE
+  log.pred: FALSE
+  norm.pred: FALSE # Dont make both log and best norm true at the same time.
   eda: FALSE
   algo.forward.caret: TRUE
   algo.backward.caret: TRUE
@@ -38,7 +39,7 @@ output.var = params$output.var
 
 transform.abs = FALSE
 log.pred = params$log.pred
-norm.pred = FALSE
+norm.pred = params$norm.pred
 eda = params$eda
 algo.forward.caret = params$algo.forward.caret
 algo.backward.caret = params$algo.backward.caret
@@ -52,6 +53,9 @@ str(params)
 ```{r setup Labels}
 # Setup Labels
 output.var.tr = if (log.pred == TRUE)  paste0(output.var,'.log') else  output.var.tr = output.var
+# output.var.tr = if (log.pred == TRUE)  paste0(output.var,'.cuberoot') else  output.var.tr = output.var
+# output.var.tr = if (norm.pred == TRUE)  paste0(output.var,'.bestnorm') else  output.var.tr = output.var
+
 ```
 
 # Loading Data
@@ -105,6 +109,7 @@ ggplot(gather(select_at(data,output.var)), aes(sample=value)) +
 
 ```{r Trans Output, fig.height=4}
 if(log.pred==TRUE) data[[output.var.tr]] = log(data[[output.var]],10) else
+# if(log.pred==TRUE) data[[output.var.tr]] = (data[[output.var]])^(1/3) else
   data[[output.var.tr]] = data[[output.var]]
 df=gather(select_at(data,c(output.var,output.var.tr)))
 ggplot(df, aes(value)) + 
@@ -124,17 +129,83 @@ ggplot(gather(select_at(data,c(output.var,output.var.tr))), aes(sample=value)) +
 Normalization of **`r output.var`** using bestNormalize package.  (suggested orderNorm)
 This is cool, but I think is too far for the objective of the project
 
-```{r bestNormy, cache=T,fig.height=4}
-t=bestNormalize::bestNormalize(data[[output.var]])
-t
-qqnorm(data[[output.var]])
-qqnorm(predict(t))
+```{r bestNormy,fig.height=4}
+if (norm.pred == TRUE){
+  t=bestNormalize::bestNormalize(data[[output.var]])
+  t
+  qqnorm(data[[output.var]])
+  qqnorm(predict(t))
+  data[[output.var.tr]] = predict(t)
+}
 ```
 
 **orderNorm()** is a rank-based procedure by which the values of a vector are mapped to their percentile, which is then mapped to the same percentile of the normal distribution. Without the presence of ties, this essentially guarantees that the transformation leads to a uniform distribution
 
 
 # Predictors
+
+## Feature Engineering
+```{r}
+data$x2byx1 = data$x2/data$x1
+data$x6byx5 = data$x6/data$x5
+data$x9byx7 = data$x9/data$x7
+data$x10byx8 = data$x10/data$x8
+data$x14byx12 = data$x14/data$x12
+data$x15byx13 = data$x15/data$x13
+data$x17byx16 = data$x17/data$x16
+data$x19byx18 = data$x19/data$x18
+data$x21byx20 = data$x21/data$x20
+data$x23byx22 = data$x23/data$x22
+data$x1log = log(data$x1)
+data$x2log = log(data$x2)
+data$x5log = log(data$x5)
+data$x6log = log(data$x6)
+data$x7log = log(data$x7)
+data$x9log = log(data$x9)
+data$x8log = log(data$x8)
+data$x10log = log(data$x10)
+data$x12log = log(data$x12)
+data$x14log = log(data$x14)
+data$x13log = log(data$x13)
+data$x15log = log(data$x15)
+data$x16log = log(data$x16)
+data$x17log = log(data$x17)
+data$x18log = log(data$x18)
+data$x19log = log(data$x19)
+data$x20log = log(data$x20)
+data$x21log = log(data$x21)
+data$x22log = log(data$x22)
+data$x23log = log(data$x23)
+```
+
+```{r}
+data$x11log = log(data$x11)
+```
+
+```{r}
+data$x1sqinv = 1/(data$x1)^2 
+data$x5sqinv = 1/(data$x5)^2 
+data$x7sqinv = 1/(data$x7)^2 
+data$x8sqinv = 1/(data$x8)^2 
+data$x12sqinv = 1/(data$x12)^2 
+data$x13sqinv = 1/(data$x13)^2 
+data$x16sqinv = 1/(data$x16)^2 
+data$x18sqinv = 1/(data$x18)^2 
+data$x20sqinv = 1/(data$x20)^2 
+data$x22sqinv = 1/(data$x22)^2 
+
+```
+
+```{r}
+predictors
+
+controlled.vars = colnames(data)[grep("^x",colnames(data))]
+stat.vars = colnames(data)[grep("^stat",colnames(data))]
+
+predictors = c(controlled.vars,stat.vars)
+predictors
+```
+
 
 All predictors show a **Fat-Tail** situation, where the two tails are very tall, and a low distribution around the mean.
 The orderNorm transformation can help (see [Best Normalizator] section)
@@ -179,7 +250,7 @@ if (eda == TRUE){
 
 All indicators have a strong indication of  **Fat-Tails**
 
-```{r Histogram All, fig.height=70, fig.width=7, cache=TRUE}
+```{r Histogram All, fig.height=70, fig.width=7}
 if (eda == TRUE){
   df=gather(select_at(data,predictors))
   ggplot(df, aes(value)) + 
@@ -197,14 +268,18 @@ if (eda == TRUE){
 ```{r CorrAll}
 if (eda == TRUE){
   #chart.Correlation(select(data,-JobName),  pch=21)
+  # https://stackoverflow.com/questions/27034655/how-to-use-dplyrarrangedesc-when-using-a-string-as-column-name
   t=as.data.frame(round(cor(dplyr::select(data,-one_of(output.var.tr,'JobName'))
                             ,select_at(data,output.var.tr)),4))  %>%
-    rownames_to_column(var='variable') %>% filter(variable != !!output.var) %>% arrange(-y3.log)
+    #rownames_to_column(var='variable') %>% filter(variable != !!output.var) %>% arrange(-y3.log)
+    rownames_to_column(var='variable') %>% filter(variable != !!output.var) %>% arrange(-!!sym(output.var.tr))
   #DT::datatable(t)
   message("Top Positive")
-  kable(head(arrange(t,desc(y3.log)),20))
+  #kable(head(arrange(t,desc(y3.log)),20))
+  kable(head(arrange(t,desc(!!sym(output.var.tr))),20))
   message("Top Negative")
-  kable(head(arrange(t,y3.log),20))
+  #kable(head(arrange(t,y3.log),20))
+  kable(head(arrange(t,!!sym(output.var.tr)),20))
 }
 ```
 
@@ -224,7 +299,7 @@ if (eda == TRUE){
 
 Scatter plots with all predictors and the output variable (`r output.var.tr`)
 
-```{r scatter_plots, fig.height=90, fig.width=7, cache=TRUE}
+```{r scatter_plots, fig.height=90, fig.width=7}
 if (eda == TRUE){
   d = gather(dplyr::select_at(data,c(predictors,output.var.tr)),key=target,value=value,-!!output.var.tr)
   ggplot(data=d, aes_string(x='value',y=output.var.tr)) + 
@@ -240,10 +315,10 @@ No Multicollinearity among predictors
 
 Showing Top predictor by VIF Value
 
-```{r vif, cache=TRUE}
+```{r vif}
 if (eda == TRUE){
   vifDF = usdm::vif(select_at(data,predictors)) %>% arrange(desc(VIF))
-  head(vifDF,15)
+  head(vifDF,75)
 }
 ```
  
@@ -277,7 +352,8 @@ ggplot(data=d, aes_string(x='value',y=output.var.tr)) +
 ```{r feat_eng_update}
 #removing unwanted variables
 data.tr=data.tr %>%
-  dplyr::select_at(names(data.tr)[! names(data.tr) %in% c('x18','y3','JobName')])
+  #dplyr::select_at(names(data.tr)[! names(data.tr) %in% c('x18','y3','JobName')])
+  dplyr::select_at(names(data.tr)[! names(data.tr) %in% c('JobName')])
 
 data=data.tr
 label.names=output.var.tr
@@ -288,7 +364,7 @@ label.names=output.var.tr
 ## PCA
 
 
-```{r PCA, cache=T}
+```{r PCA}
 # 0 for no interaction, 
 # 1 for Full 2 way interaction and 
 # 2 for Selective 2 way interaction
@@ -682,6 +758,9 @@ test.model = function(model, test, level=0.95
   test.mse = mean((test[,label.names]-pred[,1])^2)
   print (paste(method, subopt, "Test MSE:", test.mse, sep=" "))
   
+  test.rmse = sqrt(test.mse)
+  print (paste(method, subopt, "Test RMSE:", test.rmse, sep=" "))
+  
   if(log.pred == TRUE || norm.pred == TRUE){
     # plot transformewd comparison first
     df=data.frame(x=test[,label.names],y=pred[,1])
@@ -699,12 +778,20 @@ test.model = function(model, test, level=0.95
   }
   if (log.pred == TRUE){
     x = 10^test[,label.names]
-    y = 10^pred[,1]  
+    y = 10^pred[,1]
+    # x = (test[,label.names])^3
+    # y = (pred[,1])^3
   }
   if (norm.pred == TRUE){
     x = predict(transformation, test[,label.names], inverse = TRUE)
     y = predict(transformation, pred[,1], inverse = TRUE)
   }
+
+  test.mse = mean((x-y)^2)
+  print (paste(method, subopt, "Test MSE (Org Scale):", test.mse, sep=" "))
+  
+  test.rmse = sqrt(test.mse)
+  print (paste(method, subopt, "Test RMSE (Org Scale):", test.rmse, sep=" "))
 
   df=data.frame(x,y)
   ggplot(df,aes(x,y)) +
@@ -713,7 +800,7 @@ test.model = function(model, test, level=0.95
                 ,intercept=rep(0,4),color=c('dark green','dark green','dark red','dark red'),size=1,alpha=0.8) +
     #scale_y_continuous(limits=c(min(df),max(df)))+
     xlab("Actual")+
-    ylab("Predicted") 
+    ylab("Predicted")
     
  
 }
@@ -743,7 +830,7 @@ cd.full = plot.diagnostics(model=model.full, train=data.train)
 ```
 
 ## Checking with removal of high influence points
-```{r HighInfluenceCheck, cache=T}
+```{r HighInfluenceCheck}
 high.cd = names(cd.full[cd.full > 4/nrow(data.train)])
 
 #save dataset with high.cd flagged
@@ -799,7 +886,7 @@ ggplot(mm,aes(x=type, y=value)) +
 ```
 
 
-```{r High Leverage plot, fig.height=40, cache=T}
+```{r High Leverage plot, fig.height=40}
 # Distribution (box) Plots
 mm = melt(plotData, id=c('type'))
 
@@ -875,7 +962,7 @@ if (algo.backward.caret == TRUE){
 
 ### Stepwise Selection with CV 
 #### Train
-```{r Stepwise,fig.height=5,cache=T}
+```{r Stepwise,fig.height=5}
 if (algo.stepwise.caret == TRUE){
   set.seed(1)
   returned = train.caret.glmselect(formula = formula
