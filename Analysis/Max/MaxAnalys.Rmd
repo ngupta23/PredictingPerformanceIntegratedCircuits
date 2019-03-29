@@ -438,7 +438,7 @@ train.caret.glmselect = function(formula, data, method
   }
   
   # http://sshaikh.org/2015/05/06/parallelize-machine-learning-in-r-with-multi-core-cpus/
-  cl <- makeCluster(ceiling(detectCores()*0.85)) # use 75% of cores only, leave rest for other tasks
+  cl <- makeCluster(ceiling(detectCores()*0.90)) # use 75% of cores only, leave rest for other tasks
   registerDoParallel(cl)
 
   set.seed(1) 
