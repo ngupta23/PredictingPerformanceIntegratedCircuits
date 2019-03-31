@@ -1,9 +1,9 @@
-Week 1 (9th - 16th)
+## Week 1 (9th - 16th)
  - Introduction (send for approval) [Nikhil]
  - [Option 1] Feature Engineering (Basic with only interaction terms) [Max]
  - [Option 2] Export grouping from R (dataset with group variable so it can be used in SAS) [Max]
  
-Week 2 and 3 (17th - 31st)
+## Week 2 and 3 (17th - 31st)
  - [Option 1] 
  **PCR with Basic Feature Engineering - 2 way interactions of all variables.** [Max]
      1. PCA is working. However, feature selection (Forward, Backward, Stepwise running for over 1 week and still not done).
@@ -31,7 +31,7 @@ Week 2 and 3 (17th - 31st)
      3. Train LM model with grouping variable (+ interactions) [Joanna] 
          - Since we are short of time, keep as next steps in paper, i.e. create a pipeline of models with Logistic Regression output being used as a feature for linear regression)
  
-Week 4 (1st - 7th)
+## Week 4 (1st - 7th)
  - **Prepare Paper and Presentation** [All]
      1. Nikhil to add outline of paper/presentation (before Sat April 6th)
      2. Joanna to start filling details (before Sat April 6th)
