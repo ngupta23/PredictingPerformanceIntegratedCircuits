@@ -29,7 +29,7 @@
          - Since we are short of time, keep as next steps in paper, i.e. create a pipeline of models with Logistic Regression output being used as a feature for linear regression)
  
 ## Week 4 (1st - 7th)
- - **Prepare Paper and Presentation** [All]
+### Prepare Paper and Presentation [All]
      1. Nikhil to add outline of paper/presentation (before Sat April 6th)
      2. Joanna to start filling details (before Sat April 6th)
      3. Meet Sat/Sun to finalize paper/presentation 
