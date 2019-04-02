@@ -12,12 +12,12 @@ output:
    reference_docx: word_template.docx
 params:
   output.var: 'y3'
-  log.pred: FALSE
+  log.pred: TRUE
   norm.pred: FALSE # Dont make both log and best norm true at the same time.
   eda: FALSE
-  algo.forward.caret: TRUE
-  algo.backward.caret: TRUE
-  algo.stepwise.caret: TRUE
+  algo.forward.caret: FALSE
+  algo.backward.caret: FALSE
+  algo.stepwise.caret: FALSE
   algo.LASSO.caret: TRUE
   algo.LARS.caret: TRUE
 ---
@@ -197,13 +197,16 @@ data$x22sqinv = 1/(data$x22)^2
 ```
 
 ```{r}
-predictors
+print("Predictors before feature engineering")
+print (predictors)
 
 controlled.vars = colnames(data)[grep("^x",colnames(data))]
 stat.vars = colnames(data)[grep("^stat",colnames(data))]
 
 predictors = c(controlled.vars,stat.vars)
-predictors
+
+print("Predictors after feature engineering")
+print (predictors)
 ```
 
 
@@ -223,11 +226,7 @@ if (eda == TRUE){
     geom_density() + 
     # stat_function(fun = dnorm, n = 100, args = list(mean = mean(df$value), sd = sd(df$value)))  
     facet_wrap(~key, scales = 'free',ncol=3)
-  
-  # ggplot(gather(select_at(data,cols)), aes(sample=value)) + 
-  #   stat_qq()+
-  #   facet_wrap(~key, scales = 'free',ncol=2)
-  
+ 
   lapply(select_at(data,cols),summary)
 }
 ```
@@ -273,15 +272,25 @@ if (eda == TRUE){
                             ,select_at(data,output.var.tr)),4))  %>%
     #rownames_to_column(var='variable') %>% filter(variable != !!output.var) %>% arrange(-y3.log)
     rownames_to_column(var='variable') %>% filter(variable != !!output.var) %>% arrange(-!!sym(output.var.tr))
-  #DT::datatable(t)
+}
+```
+
+```{r }
+if (eda == TRUE){
   message("Top Positive")
   #kable(head(arrange(t,desc(y3.log)),20))
   kable(head(arrange(t,desc(!!sym(output.var.tr))),20))
-  message("Top Negative")
-  #kable(head(arrange(t,y3.log),20))
-  kable(head(arrange(t,!!sym(output.var.tr)),20))
 }
 ```
+
+```{r }
+if (eda == TRUE){
+  message("Top Negative")
+  #kable(head(arrange(t,y3.log),20))
+  kable(head(arrange(t,!!sym(output.var.tr)),20))  
+}
+```
+
 
 ## Between All Variables
 
@@ -308,6 +317,10 @@ if (eda == TRUE){
     facet_wrap(~target, scales = 'free',ncol=4)
 }
 ```
+
+
+
+
 
 ## Multicollinearity - VIF
 
@@ -336,11 +349,6 @@ cols=c('x18','x18.sqrt')
 
 
 ```{r Compare, fig.height=3}
-# ggplot(gather(select_at(data.tr,cols)), aes(value)) + 
-#   geom_histogram(aes(y=..density..),bins = 50,fill='light blue') + 
-#   geom_density() + 
-#   facet_wrap(~key, scales = 'free',ncol=4)
-
 d = gather(dplyr::select_at(data.tr,c(cols,output.var.tr)),key=target,value=value,-!!output.var.tr)
 ggplot(data=d, aes_string(x='value',y=output.var.tr)) + 
   geom_point(color='light blue',alpha=0.5) + 
@@ -369,11 +377,10 @@ label.names=output.var.tr
 # 1 for Full 2 way interaction and 
 # 2 for Selective 2 way interaction
 # 3 for Selective 3 way interaction
-InteractionMode = 2
+InteractionMode = 1
 
 pca.vars  = names(data)
 pca.vars = pca.vars[!pca.vars %in% label.names]
-
 
 # http://sshaikh.org/2015/05/06/parallelize-machine-learning-in-r-with-multi-core-cpus/
 # #cl <- makeCluster(ceiling(detectCores()*0.5)) # use 75% of cores only, leave rest for other tasks
@@ -431,6 +438,8 @@ data.pca = dplyr::select(data,!!label.names) %>%
                                  ,!!colnames(pca.model$rotation)[pca.model$pcaSel])
   )
 ```
+
+
 
 ##  Train Test Split
 
@@ -737,17 +746,14 @@ test.model = function(model, test, level=0.95
   if (is.null(method)){
     pred = predict(model, newdata=test, interval="confidence", level = level) 
   }
-  
-  if (method == 'leapForward' | method == 'leapBackward' | method == 'leapSeq'){
+  else if (method == 'leapForward' | method == 'leapBackward' | method == 'leapSeq'){
     pred = predict.regsubsets(model, newdata = test, id = id, formula = formula)
   }
-  
-  if (method == 'glmnet' && subopt == 'LASSO'){
+  else if (method == 'glmnet' && subopt == 'LASSO'){
     xtest = as.matrix(test[,feature.names]) 
     pred=as.data.frame(predict(model, xtest))
   }
-  
-  if (method == 'lars'){
+  else if (method == 'lars'){
     pred=as.data.frame(predict(model, newdata = test))
   }
     
@@ -821,7 +827,43 @@ print(grand.mean.formula)
 feature.names = n[!n %in% label.names]
 ```
 
+
+Scatter plots with all PCAs and the output variable (`r output.var.tr`)
+
+```{r scatter_plots_PCA, fig.height=90, fig.width=7}
+  d = gather(dplyr::select_at(data.pca,c(feature.names,output.var.tr)),key=target,value=value,-!!output.var.tr)
+  ggplot(data=d, aes_string(x='value',y=output.var.tr)) + 
+    geom_point(color='light blue',alpha=0.5) + 
+    geom_smooth() + 
+    facet_wrap(~target, scales = 'free',ncol=4)
+
+```
+
+
+```{r CorrPCA}
+#chart.Correlation(select(data,-JobName),  pch=21)
+# https://stackoverflow.com/questions/27034655/how-to-use-dplyrarrangedesc-when-using-a-string-as-column-name
+t=as.data.frame(round(cor(dplyr::select(data.pca,-one_of(output.var.tr))
+                          ,select_at(data,output.var.tr)),4))  %>%
+  rownames_to_column(var='variable') %>% arrange(-!!sym(output.var.tr))
+
+```
+
+```{r }
+message("Top Positive")
+kable(head(arrange(t,desc(!!sym(output.var.tr))),20))
+
+```
+
+```{r }
+message("Top Negative")
+kable(head(arrange(t,!!sym(output.var.tr)),20))  
+```
+
+
 ## Full Model
+
+### Train
 
 ```{r Full Model}
 model.full = lm(formula , data.train)
@@ -829,80 +871,16 @@ summary(model.full)
 cd.full = plot.diagnostics(model=model.full, train=data.train)
 ```
 
-## Checking with removal of high influence points
-```{r HighInfluenceCheck}
-high.cd = names(cd.full[cd.full > 4/nrow(data.train)])
-
-#save dataset with high.cd flagged
-t = data.train %>% 
-  rownames_to_column() %>%
-  mutate(high.cd = ifelse(rowname %in% high.cd,1,0))
-#write.csv(t,file='data_high_cd_flag.csv',row.names = F)
-###
-data.train2 = data.train[!(rownames(data.train)) %in% high.cd,]
-model.full2 = lm(formula , data.train2)
-summary(model.full2)
-cd.full2 = plot.diagnostics(model.full2, data.train2)
-
-# much more normal residuals than before. 
-# Checking to see if distributions are different and if so whcih variables
-# High Leverage Plot 
-plotData = data.train %>% 
-  rownames_to_column() %>%
-  mutate(type=ifelse(rowname %in% high.cd,'High','Normal')) %>%
-  dplyr::select(type,target=one_of(label.names))
-
-ggplot(data=plotData, aes(x=type,y=target)) +
-  geom_boxplot(fill='light blue',outlier.shape=NA) +
-  scale_y_continuous(name="Target Variable Values",label=scales::comma_format(accuracy=.1)) +
-  theme_light() +
-  ggtitle('Distribution of High Leverage Points and Normal  Points')
-
+### Test
+```{r}
+test.model(model.full, data.test
+             ,method = NULL , subopt = NULL
+             ,formula = formula, feature.names = feature.names, label.names = label.names
+             ,id = id
+             ,draw.limits = TRUE, transformation = t)
 
 ```
 
-```{r 2SampleTest}
-# 2 sample t-tests
-
-plotData = data.train %>% 
-  rownames_to_column() %>%
-  mutate(type=ifelse(rowname %in% high.cd,'High','Normal')) %>%
-  dplyr::select(type,one_of(feature.names))
-
-comp.test = lapply(dplyr::select(plotData, one_of(feature.names))
-                   , function(x) t.test(x ~ plotData$type, var.equal = TRUE)) 
-
-sig.comp = list.filter(comp.test, p.value < 0.05)
-sapply(sig.comp, function(x) x[['p.value']])
-
-mm = melt(plotData, id=c('type')) %>% filter(variable %in% names(sig.comp))
-
-ggplot(mm,aes(x=type, y=value)) +
-  geom_boxplot()+
-  facet_wrap(~variable, ncol=5, scales = 'free_y') +
-  scale_y_continuous(name="values",label=scales::comma_format(accuracy=.1)) +
-  ggtitle('Distribution of High Leverage Points and Normal Points')
-
-```
-
-
-```{r High Leverage plot, fig.height=40}
-# Distribution (box) Plots
-mm = melt(plotData, id=c('type'))
-
-ggplot(mm,aes(x=type, y=value)) +
-  geom_boxplot()+
-  facet_wrap(~variable, ncol=8, scales = 'free_y') +
-  scale_y_continuous(name="values",label=scales::comma_format(accuracy=.1)) +
-  ggtitle('Distribution of High Leverage Points and Normal Points')
-
-```
-
-## Grand Means Model
-```{r Grand Mean Model}
-model.null = lm(grand.mean.formula, data.train)
-summary(model.null)
-```
 
 ## Variable Selection 
 Basic: http://www.stat.columbia.edu/~martin/W2024/R10.pdf 
