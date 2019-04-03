@@ -19,7 +19,7 @@ params:
   algo.backward.caret: FALSE
   algo.stepwise.caret: FALSE
   algo.LASSO.caret: TRUE
-  algo.LARS.caret: TRUE
+  algo.LARS.caret: FALSE
 ---
 
 ```{r setup, include=FALSE}
@@ -970,7 +970,8 @@ if (algo.stepwise.caret == TRUE){
 ```{r Lasso, fig.height=5}
 if (algo.LASSO.caret == TRUE){
   set.seed(1)
-  tune.grid= expand.grid(alpha = 1,lambda = 10^seq(from=-4,to=-2,length=100))
+  #tune.grid= expand.grid(alpha = 1,lambda = 10^seq(from=-4,to=-2,length=100))  good results, but Rsq was keep growing..
+  tune.grid= expand.grid(alpha = 1,lambda = 1/10^(seq(from=3, to=10, length=100)))
   returned = train.caret.glmselect(formula = formula
                                    ,data =  data.train
                                    ,method = "glmnet"
