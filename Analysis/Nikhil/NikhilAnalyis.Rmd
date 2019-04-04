@@ -19,7 +19,7 @@ params:
   algo.backward.caret: FALSE
   algo.stepwise.caret: FALSE
   algo.LASSO.caret: TRUE
-  algo.LARS.caret: FALSE
+  algo.LARS.caret: TRUE
 ---
 
 ```{r setup, include=FALSE}
@@ -417,7 +417,7 @@ registerDoSEQ() # register sequential engine in case you are not using this func
 ```
 
 ```{r}
-targetCumVar = .9
+targetCumVar = .8 #was 0.9
 
 pca.model$var = pca.model$sdev ^ 2 #eigenvalues
 pca.model$pvar = pca.model$var / sum(pca.model$var)
