@@ -13,6 +13,8 @@ output:
 params:
   output.var: 'y3'
   log.pred: TRUE
+  norm.pred: FALSE # Dont make both log and best norm true at the same time.
+  eda: FALSE
   algo.forward.caret: FALSE
   algo.backward.caret: FALSE
   algo.stepwise.caret: FALSE
@@ -37,7 +39,8 @@ output.var = params$output.var
 
 transform.abs = FALSE
 log.pred = params$log.pred
-norm.pred = FALSE
+norm.pred = params$norm.pred
+eda = params$eda
 algo.forward.caret = params$algo.forward.caret
 algo.backward.caret = params$algo.backward.caret
 algo.stepwise.caret = params$algo.stepwise.caret
@@ -50,6 +53,9 @@ str(params)
 ```{r setup Labels}
 # Setup Labels
 output.var.tr = if (log.pred == TRUE)  paste0(output.var,'.log') else  output.var.tr = output.var
+# output.var.tr = if (log.pred == TRUE)  paste0(output.var,'.cuberoot') else  output.var.tr = output.var
+# output.var.tr = if (norm.pred == TRUE)  paste0(output.var,'.bestnorm') else  output.var.tr = output.var
+
 ```
 
 # Loading Data
@@ -103,6 +109,7 @@ ggplot(gather(select_at(data,output.var)), aes(sample=value)) +
 
 ```{r Trans Output, fig.height=4}
 if(log.pred==TRUE) data[[output.var.tr]] = log(data[[output.var]],10) else
+# if(log.pred==TRUE) data[[output.var.tr]] = (data[[output.var]])^(1/3) else
   data[[output.var.tr]] = data[[output.var]]
 df=gather(select_at(data,c(output.var,output.var.tr)))
 ggplot(df, aes(value)) + 
@@ -122,17 +129,86 @@ ggplot(gather(select_at(data,c(output.var,output.var.tr))), aes(sample=value)) +
 Normalization of **`r output.var`** using bestNormalize package.  (suggested orderNorm)
 This is cool, but I think is too far for the objective of the project
 
-```{r bestNormy, cache=T,fig.height=4}
-t=bestNormalize::bestNormalize(data[[output.var]])
-t
-qqnorm(data[[output.var]])
-qqnorm(predict(t))
+```{r bestNormy,fig.height=4}
+if (norm.pred == TRUE){
+  t=bestNormalize::bestNormalize(data[[output.var]])
+  t
+  qqnorm(data[[output.var]])
+  qqnorm(predict(t))
+  data[[output.var.tr]] = predict(t)
+}
 ```
 
 **orderNorm()** is a rank-based procedure by which the values of a vector are mapped to their percentile, which is then mapped to the same percentile of the normal distribution. Without the presence of ties, this essentially guarantees that the transformation leads to a uniform distribution
 
 
 # Predictors
+
+## Feature Engineering
+```{r}
+data$x2byx1 = data$x2/data$x1
+data$x6byx5 = data$x6/data$x5
+data$x9byx7 = data$x9/data$x7
+data$x10byx8 = data$x10/data$x8
+data$x14byx12 = data$x14/data$x12
+data$x15byx13 = data$x15/data$x13
+data$x17byx16 = data$x17/data$x16
+data$x19byx18 = data$x19/data$x18
+data$x21byx20 = data$x21/data$x20
+data$x23byx22 = data$x23/data$x22
+data$x1log = log(data$x1)
+data$x2log = log(data$x2)
+data$x5log = log(data$x5)
+data$x6log = log(data$x6)
+data$x7log = log(data$x7)
+data$x9log = log(data$x9)
+data$x8log = log(data$x8)
+data$x10log = log(data$x10)
+data$x12log = log(data$x12)
+data$x14log = log(data$x14)
+data$x13log = log(data$x13)
+data$x15log = log(data$x15)
+data$x16log = log(data$x16)
+data$x17log = log(data$x17)
+data$x18log = log(data$x18)
+data$x19log = log(data$x19)
+data$x20log = log(data$x20)
+data$x21log = log(data$x21)
+data$x22log = log(data$x22)
+data$x23log = log(data$x23)
+```
+
+```{r}
+data$x11log = log(data$x11)
+```
+
+```{r}
+data$x1sqinv = 1/(data$x1)^2 
+data$x5sqinv = 1/(data$x5)^2 
+data$x7sqinv = 1/(data$x7)^2 
+data$x8sqinv = 1/(data$x8)^2 
+data$x12sqinv = 1/(data$x12)^2 
+data$x13sqinv = 1/(data$x13)^2 
+data$x16sqinv = 1/(data$x16)^2 
+data$x18sqinv = 1/(data$x18)^2 
+data$x20sqinv = 1/(data$x20)^2 
+data$x22sqinv = 1/(data$x22)^2 
+
+```
+
+```{r}
+print("Predictors before feature engineering")
+print (predictors)
+
+controlled.vars = colnames(data)[grep("^x",colnames(data))]
+stat.vars = colnames(data)[grep("^stat",colnames(data))]
+
+predictors = c(controlled.vars,stat.vars)
+
+print("Predictors after feature engineering")
+print (predictors)
+```
+
 
 All predictors show a **Fat-Tail** situation, where the two tails are very tall, and a low distribution around the mean.
 The orderNorm transformation can help (see [Best Normalizator] section)
@@ -142,30 +218,29 @@ The orderNorm transformation can help (see [Best Normalizator] section)
 Histograms
 
 ```{r Histo Interest Pred, fig.height=6}
-cols = c('x11','x18','stat98','x7','stat110')
-df=gather(select_at(data,cols))
-ggplot(df, aes(value)) + 
-  geom_histogram(aes(y=..density..),bins = 50,fill='light blue') + 
-  geom_density() + 
-  # stat_function(fun = dnorm, n = 100, args = list(mean = mean(df$value), sd = sd(df$value)))  
-  facet_wrap(~key, scales = 'free',ncol=3)
-
-# ggplot(gather(select_at(data,cols)), aes(sample=value)) + 
-#   stat_qq()+
-#   facet_wrap(~key, scales = 'free',ncol=2)
-
-lapply(select_at(data,cols),summary)
+if (eda == TRUE){
+  cols = c('x11','x18','stat98','x7','stat110')
+  df=gather(select_at(data,cols))
+  ggplot(df, aes(value)) + 
+    geom_histogram(aes(y=..density..),bins = 50,fill='light blue') + 
+    geom_density() + 
+    # stat_function(fun = dnorm, n = 100, args = list(mean = mean(df$value), sd = sd(df$value)))  
+    facet_wrap(~key, scales = 'free',ncol=3)
+ 
+  lapply(select_at(data,cols),summary)
+}
 ```
 
 Scatter plot vs. output variable **`r output.var.tr`
 
 ```{r Scatters Interes Pred, fig.height=6}
-
-d = gather(dplyr::select_at(data,c(cols,output.var.tr)),key=target,value=value,-!!output.var.tr)
-ggplot(data=d, aes_string(x='value',y=output.var.tr)) + 
-  geom_point(color='light green',alpha=0.5) + 
-  geom_smooth() + 
-  facet_wrap(~target, scales = 'free',ncol=3)
+if (eda == TRUE){
+  d = gather(dplyr::select_at(data,c(cols,output.var.tr)),key=target,value=value,-!!output.var.tr)
+  ggplot(data=d, aes_string(x='value',y=output.var.tr)) + 
+    geom_point(color='light green',alpha=0.5) + 
+    geom_smooth() + 
+    facet_wrap(~target, scales = 'free',ncol=3)
+}
 ```
 
 ## All Predictors
@@ -174,13 +249,15 @@ ggplot(data=d, aes_string(x='value',y=output.var.tr)) +
 
 All indicators have a strong indication of  **Fat-Tails**
 
-```{r Histogram All, fig.height=70, fig.width=7, cache=TRUE}
-df=gather(select_at(data,predictors))
-ggplot(df, aes(value)) + 
-  geom_histogram(aes(y=..density..),bins = 50,fill='light blue') + 
-  geom_density() + 
-  # stat_function(fun = dnorm, n = 100, args = list(mean = mean(df$value), sd = sd(df$value)))  
-  facet_wrap(~key, scales = 'free',ncol=4)
+```{r Histogram All, fig.height=70, fig.width=7}
+if (eda == TRUE){
+  df=gather(select_at(data,predictors))
+  ggplot(df, aes(value)) + 
+    geom_histogram(aes(y=..density..),bins = 50,fill='light blue') + 
+    geom_density() + 
+    # stat_function(fun = dnorm, n = 100, args = list(mean = mean(df$value), sd = sd(df$value)))  
+    facet_wrap(~key, scales = 'free',ncol=4)
+}
 ```
 
 # Correlations
@@ -188,38 +265,62 @@ ggplot(df, aes(value)) +
 ## With Output Variable 
 
 ```{r CorrAll}
-#chart.Correlation(select(data,-JobName),  pch=21)
-t=as.data.frame(round(cor(dplyr::select(data,-one_of(output.var.tr,'JobName'))
-                          ,select_at(data,output.var.tr)),4))  %>%
-  rownames_to_column(var='variable') %>% filter(variable != !!output.var) %>% arrange(-y3.log)
-#DT::datatable(t)
-message("Top Positive")
-kable(head(arrange(t,desc(y3.log)),20))
-message("Top Negative")
-kable(head(arrange(t,y3.log),20))
+if (eda == TRUE){
+  #chart.Correlation(select(data,-JobName),  pch=21)
+  # https://stackoverflow.com/questions/27034655/how-to-use-dplyrarrangedesc-when-using-a-string-as-column-name
+  t=as.data.frame(round(cor(dplyr::select(data,-one_of(output.var.tr,'JobName'))
+                            ,select_at(data,output.var.tr)),4))  %>%
+    #rownames_to_column(var='variable') %>% filter(variable != !!output.var) %>% arrange(-y3.log)
+    rownames_to_column(var='variable') %>% filter(variable != !!output.var) %>% arrange(-!!sym(output.var.tr))
+}
 ```
+
+```{r }
+if (eda == TRUE){
+  message("Top Positive")
+  #kable(head(arrange(t,desc(y3.log)),20))
+  kable(head(arrange(t,desc(!!sym(output.var.tr))),20))
+}
+```
+
+```{r }
+if (eda == TRUE){
+  message("Top Negative")
+  #kable(head(arrange(t,y3.log),20))
+  kable(head(arrange(t,!!sym(output.var.tr)),20))  
+}
+```
+
 
 ## Between All Variables
 
 ```{r correlation, fig.height=7}
-#chart.Correlation(select(data,-JobName),  pch=21)
-t=as.data.frame(round(cor(dplyr::select(data,-one_of('JobName'))),4))
-#DT::datatable(t,options=list(scrollX=T))
-message("Showing only 10 variables")
-kable(t[1:10,1:10])
+if (eda == TRUE){
+  #chart.Correlation(select(data,-JobName),  pch=21)
+  t=as.data.frame(round(cor(dplyr::select(data,-one_of('JobName'))),4))
+  #DT::datatable(t,options=list(scrollX=T))
+  message("Showing only 10 variables")
+  kable(t[1:10,1:10])
+}
 ```
  
 ## Scatter Plots with Output Variable
 
 Scatter plots with all predictors and the output variable (`r output.var.tr`)
 
-```{r scatter_plots, fig.height=90, fig.width=7, cache=TRUE}
-d = gather(dplyr::select_at(data,c(predictors,output.var.tr)),key=target,value=value,-!!output.var.tr)
-ggplot(data=d, aes_string(x='value',y=output.var.tr)) + 
-  geom_point(color='light blue',alpha=0.5) + 
-  geom_smooth() + 
-  facet_wrap(~target, scales = 'free',ncol=4)
+```{r scatter_plots, fig.height=90, fig.width=7}
+if (eda == TRUE){
+  d = gather(dplyr::select_at(data,c(predictors,output.var.tr)),key=target,value=value,-!!output.var.tr)
+  ggplot(data=d, aes_string(x='value',y=output.var.tr)) + 
+    geom_point(color='light blue',alpha=0.5) + 
+    geom_smooth() + 
+    facet_wrap(~target, scales = 'free',ncol=4)
+}
 ```
+
+
+
+
 
 ## Multicollinearity - VIF
 
@@ -227,9 +328,11 @@ No Multicollinearity among predictors
 
 Showing Top predictor by VIF Value
 
-```{r vif, cache=TRUE}
-vifDF = usdm::vif(select_at(data,predictors)) %>% arrange(desc(VIF))
-head(vifDF,15)
+```{r vif}
+if (eda == TRUE){
+  vifDF = usdm::vif(select_at(data,predictors)) %>% arrange(desc(VIF))
+  head(vifDF,75)
+}
 ```
  
 # Feature Eng
@@ -246,11 +349,6 @@ cols=c('x18','x18.sqrt')
 
 
 ```{r Compare, fig.height=3}
-# ggplot(gather(select_at(data.tr,cols)), aes(value)) + 
-#   geom_histogram(aes(y=..density..),bins = 50,fill='light blue') + 
-#   geom_density() + 
-#   facet_wrap(~key, scales = 'free',ncol=4)
-
 d = gather(dplyr::select_at(data.tr,c(cols,output.var.tr)),key=target,value=value,-!!output.var.tr)
 ggplot(data=d, aes_string(x='value',y=output.var.tr)) + 
   geom_point(color='light blue',alpha=0.5) + 
@@ -262,7 +360,8 @@ ggplot(data=d, aes_string(x='value',y=output.var.tr)) +
 ```{r feat_eng_update}
 #removing unwanted variables
 data.tr=data.tr %>%
-  dplyr::select_at(names(data.tr)[! names(data.tr) %in% c('x18','y3','JobName')])
+  #dplyr::select_at(names(data.tr)[! names(data.tr) %in% c('x18','y3','JobName')])
+  dplyr::select_at(names(data.tr)[! names(data.tr) %in% c('JobName')])
 
 data=data.tr
 label.names=output.var.tr
@@ -272,19 +371,53 @@ label.names=output.var.tr
 
 ## PCA
 
+
 ```{r PCA}
-fullInteraction=TRUE
+# 0 for no interaction, 
+# 1 for Full 2 way interaction and 
+# 2 for Selective 2 way interaction
+# 3 for Selective 3 way interaction
+InteractionMode = 1
+
 pca.vars  = names(data)
 pca.vars = pca.vars[!pca.vars %in% label.names]
 
-if(fullInteraction){
+# http://sshaikh.org/2015/05/06/parallelize-machine-learning-in-r-with-multi-core-cpus/
+# #cl <- makeCluster(ceiling(detectCores()*0.5)) # use 75% of cores only, leave rest for other tasks
+cl <- makeCluster(detectCores()*0.75) # use 75% of cores only, leave rest for other tasks
+registerDoParallel(cl)
+
+if(InteractionMode == 1){
   pca.formula =as.formula(paste0('~(',paste0(pca.vars, collapse ='+'),')^2'))
   pca.model = prcomp(formula=pca.formula,data=data[,pca.vars],center=T,scale.=T,retx = T)
-  saveRDS(pca.model,'pca.model.rds')
-} else {
+  #saveRDS(pca.model,'e:/temp/pca.model.rds')
+}
+if (InteractionMode == 0){
   pca.model =  prcomp(x=data[,pca.vars],center=T,scale.=T,retx = T)
 }
-targetCumVar = .8
+if (InteractionMode >= 2 & InteractionMode <= 3){
+  controlled.vars = pca.vars[grep("^x",pca.vars)]
+  stat.vars = pca.vars[grep("^stat",pca.vars)]
+  
+  if (InteractionMode >= 2){
+    interaction.form = paste0('~(',paste0(controlled.vars, collapse ='+'),')^2')
+  }
+  if (InteractionMode >= 3){
+    interaction.form = paste0('~(',paste0(controlled.vars, collapse ='+'),')^3')
+  }
+  no.interact.form = paste0(stat.vars, collapse ='+')
+  
+  pca.formula = as.formula(paste(interaction.form, no.interact.form, sep = "+"))
+  pca.model = prcomp(formula=pca.formula,data=data[,pca.vars],center=T,scale.=T,retx = T)
+}
+
+stopCluster(cl)
+registerDoSEQ() # register sequential engine in case you are not using this function anymore
+
+```
+
+```{r}
+targetCumVar = .8 #was 0.9
 
 pca.model$var = pca.model$sdev ^ 2 #eigenvalues
 pca.model$pvar = pca.model$var / sum(pca.model$var)
@@ -304,22 +437,22 @@ data.pca = dplyr::select(data,!!label.names) %>%
   dplyr::bind_cols(dplyr::select(as.data.frame(pca.model$x)
                                  ,!!colnames(pca.model$rotation)[pca.model$pcaSel])
   )
-predictors.pca = pca.model$var
+predictors.pca = colnames(pca.model$rotation)[pca.model$pcaSel]
 ```
 
 ## Scatter Plots with PCA variables
 
 Scatter plots with all PCA Variabes and the output variable (`r output.var.tr`)
 
-```{r scatter_plots, fig.height=90, fig.width=7, cache=TRUE}
-d = gather(dplyr::select_at(data.pca,c(predictors,output.var.tr)),key=target,value=value,-!!output.var.tr)
-ggplot(data=d, aes_string(x='value',y=output.var.tr)) + 
+```{r scatter_plots, fig.height=50, fig.width=8, cache=TRUE}
+d = gather(data.pca[,1:100],key=target,value=value,-!!label.names)
+p=ggplot(data=d, aes_string(x='value',y=label.names)) + 
   geom_point(color='light blue',alpha=0.5) + 
   geom_smooth() + 
-  facet_wrap(~target, scales = 'free',ncol=4)
+  facet_wrap(~target, scales = 'free',ncol=5)
+
+#p
 ```
-
-
 
 ##  Train Test Split
 
@@ -453,7 +586,8 @@ train.caret.glmselect = function(formula, data, method
   }
   
   # http://sshaikh.org/2015/05/06/parallelize-machine-learning-in-r-with-multi-core-cpus/
-  cl <- makeCluster(ceiling(detectCores()*0.90)) # use 75% of cores only, leave rest for other tasks
+  # #cl <- makeCluster(ceiling(detectCores()*0.5)) # use 75% of cores only, leave rest for other tasks
+  cl <- makeCluster(detectCores()*0.75) # use 75% of cores only, leave rest for other tasks
   registerDoParallel(cl)
 
   set.seed(1) 
@@ -615,7 +749,6 @@ predict.regsubsets <- function(object, newdata, id, formula, ...) {
     return(mat[,xvars]%*%coefi)
 }
   
-
 test.model = function(model, test, level=0.95
                       ,draw.limits = FALSE, good = 0.1, ok = 0.15
                       ,method = NULL, subopt = NULL
@@ -707,7 +840,43 @@ print(grand.mean.formula)
 feature.names = n[!n %in% label.names]
 ```
 
+
+Scatter plots with all PCAs and the output variable (`r output.var.tr`)
+
+```{r scatter_plots_PCA, fig.height=90, fig.width=7}
+  d = gather(dplyr::select_at(data.pca,c(feature.names,output.var.tr)),key=target,value=value,-!!output.var.tr)
+  ggplot(data=d, aes_string(x='value',y=output.var.tr)) + 
+    geom_point(color='light blue',alpha=0.5) + 
+    geom_smooth() + 
+    facet_wrap(~target, scales = 'free',ncol=4)
+
+```
+
+
+```{r CorrPCA}
+#chart.Correlation(select(data,-JobName),  pch=21)
+# https://stackoverflow.com/questions/27034655/how-to-use-dplyrarrangedesc-when-using-a-string-as-column-name
+t=as.data.frame(round(cor(dplyr::select(data.pca,-one_of(output.var.tr))
+                          ,select_at(data,output.var.tr)),4))  %>%
+  rownames_to_column(var='variable') %>% arrange(-!!sym(output.var.tr))
+
+```
+
+```{r }
+message("Top Positive")
+kable(head(arrange(t,desc(!!sym(output.var.tr))),20))
+
+```
+
+```{r }
+message("Top Negative")
+kable(head(arrange(t,!!sym(output.var.tr)),20))  
+```
+
+
 ## Full Model
+
+### Train
 
 ```{r Full Model}
 model.full = lm(formula , data.train)
@@ -715,80 +884,16 @@ summary(model.full)
 cd.full = plot.diagnostics(model=model.full, train=data.train)
 ```
 
-## Checking with removal of high influence points
-```{r HighInfluenceCheck, cache=T}
-high.cd = names(cd.full[cd.full > 4/nrow(data.train)])
-
-#save dataset with high.cd flagged
-t = data.train %>% 
-  rownames_to_column() %>%
-  mutate(high.cd = ifelse(rowname %in% high.cd,1,0))
-#write.csv(t,file='data_high_cd_flag.csv',row.names = F)
-###
-data.train2 = data.train[!(rownames(data.train)) %in% high.cd,]
-model.full2 = lm(formula , data.train2)
-summary(model.full2)
-cd.full2 = plot.diagnostics(model.full2, data.train2)
-
-# much more normal residuals than before. 
-# Checking to see if distributions are different and if so whcih variables
-# High Leverage Plot 
-plotData = data.train %>% 
-  rownames_to_column() %>%
-  mutate(type=ifelse(rowname %in% high.cd,'High','Normal')) %>%
-  dplyr::select(type,target=one_of(label.names))
-
-ggplot(data=plotData, aes(x=type,y=target)) +
-  geom_boxplot(fill='light blue',outlier.shape=NA) +
-  scale_y_continuous(name="Target Variable Values",label=scales::comma_format(accuracy=.1)) +
-  theme_light() +
-  ggtitle('Distribution of High Leverage Points and Normal  Points')
-
+### Test
+```{r}
+test.model(model.full, data.test
+             ,method = NULL , subopt = NULL
+             ,formula = formula, feature.names = feature.names, label.names = label.names
+             ,id = id
+             ,draw.limits = TRUE, transformation = t)
 
 ```
 
-```{r 2SampleTest}
-# 2 sample t-tests
-
-plotData = data.train %>% 
-  rownames_to_column() %>%
-  mutate(type=ifelse(rowname %in% high.cd,'High','Normal')) %>%
-  dplyr::select(type,one_of(feature.names))
-
-comp.test = lapply(dplyr::select(plotData, one_of(feature.names))
-                   , function(x) t.test(x ~ plotData$type, var.equal = TRUE)) 
-
-sig.comp = list.filter(comp.test, p.value < 0.05)
-sapply(sig.comp, function(x) x[['p.value']])
-
-mm = melt(plotData, id=c('type')) %>% filter(variable %in% names(sig.comp))
-
-ggplot(mm,aes(x=type, y=value)) +
-  geom_boxplot()+
-  facet_wrap(~variable, ncol=5, scales = 'free_y') +
-  scale_y_continuous(name="values",label=scales::comma_format(accuracy=.1)) +
-  ggtitle('Distribution of High Leverage Points and Normal Points')
-
-```
-
-
-```{r High Leverage plot, fig.height=40, cache=T}
-# Distribution (box) Plots
-mm = melt(plotData, id=c('type'))
-
-ggplot(mm,aes(x=type, y=value)) +
-  geom_boxplot()+
-  facet_wrap(~variable, ncol=8, scales = 'free_y') +
-  scale_y_continuous(name="values",label=scales::comma_format(accuracy=.1)) +
-  ggtitle('Distribution of High Leverage Points and Normal Points')
-
-```
-
-## Grand Means Model
-```{r Grand Mean Model}
-model.null = lm(grand.mean.formula, data.train)
-summary(model.null)
-```
 
 ## Variable Selection 
 Basic: http://www.stat.columbia.edu/~martin/W2024/R10.pdf 
@@ -848,7 +953,7 @@ if (algo.backward.caret == TRUE){
 
 ### Stepwise Selection with CV 
 #### Train
-```{r Stepwise,fig.height=5,cache=T}
+```{r Stepwise,fig.height=5}
 if (algo.stepwise.caret == TRUE){
   set.seed(1)
   returned = train.caret.glmselect(formula = formula
@@ -878,7 +983,8 @@ if (algo.stepwise.caret == TRUE){
 ```{r Lasso, fig.height=5}
 if (algo.LASSO.caret == TRUE){
   set.seed(1)
-  tune.grid= expand.grid(alpha = 1,lambda = 10^seq(from=-4,to=-2,length=100))
+  #tune.grid= expand.grid(alpha = 1,lambda = 10^seq(from=-4,to=-2,length=100))  good results, but Rsq was keep growing..
+  tune.grid= expand.grid(alpha = 1,lambda = 1/10^(seq(from=3, to=10, length=100)))
   returned = train.caret.glmselect(formula = formula
                                    ,data =  data.train
                                    ,method = "glmnet"

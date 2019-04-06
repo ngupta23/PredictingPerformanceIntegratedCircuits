@@ -709,11 +709,24 @@ feature.names = n[!n %in% label.names]
 
 ## Full Model
 
+### Train
+
 ```{r Full Model}
 model.full = lm(formula , data.train)
 summary(model.full)
 cd.full = plot.diagnostics(model=model.full, train=data.train)
 ```
+
+### Test
+```{r}
+test.model(model.full, data.test
+             ,method = NULL , subopt = NULL
+             ,formula = formula, feature.names = feature.names, label.names = label.names
+             ,id = id
+             ,draw.limits = TRUE, transformation = t)
+
+```
+
 
 ## Checking with removal of high influence points
 ```{r HighInfluenceCheck, cache=T}
