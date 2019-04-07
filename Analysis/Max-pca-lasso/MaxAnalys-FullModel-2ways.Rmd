@@ -122,7 +122,7 @@ ggplot(gather(select_at(data,c(output.var,output.var.tr))), aes(sample=value)) +
 Normalization of **`r output.var`** using bestNormalize package.  (suggested orderNorm)
 This is cool, but I think is too far for the objective of the project
 
-```{r bestNormy, cache=T,fig.height=4}
+```{r bestNormy,fig.height=4}
 t=bestNormalize::bestNormalize(data[[output.var]])
 t
 qqnorm(data[[output.var]])
@@ -174,7 +174,7 @@ ggplot(data=d, aes_string(x='value',y=output.var.tr)) +
 
 All indicators have a strong indication of  **Fat-Tails**
 
-```{r Histogram All, fig.height=70, fig.width=7, cache=TRUE}
+```{r Histogram All, fig.height=70, fig.width=7}
 df=gather(select_at(data,predictors))
 ggplot(df, aes(value)) + 
   geom_histogram(aes(y=..density..),bins = 50,fill='light blue') + 
@@ -213,7 +213,7 @@ kable(t[1:10,1:10])
 
 Scatter plots with all predictors and the output variable (`r output.var.tr`)
 
-```{r scatter_plots, fig.height=90, fig.width=7, cache=TRUE}
+```{r scatter_plots0, fig.height=90, fig.width=7}
 d = gather(dplyr::select_at(data,c(predictors,output.var.tr)),key=target,value=value,-!!output.var.tr)
 ggplot(data=d, aes_string(x='value',y=output.var.tr)) + 
   geom_point(color='light blue',alpha=0.5) + 
@@ -227,7 +227,7 @@ No Multicollinearity among predictors
 
 Showing Top predictor by VIF Value
 
-```{r vif, cache=TRUE}
+```{r vif}
 vifDF = usdm::vif(select_at(data,predictors)) %>% arrange(desc(VIF))
 head(vifDF,15)
 ```
@@ -311,12 +311,12 @@ predictors.pca = pca.model$var
 
 Scatter plots with all PCA Variabes and the output variable (`r output.var.tr`)
 
-```{r scatter_plots, fig.height=90, fig.width=7, cache=TRUE}
-d = gather(dplyr::select_at(data.pca,c(predictors,output.var.tr)),key=target,value=value,-!!output.var.tr)
-ggplot(data=d, aes_string(x='value',y=output.var.tr)) + 
-  geom_point(color='light blue',alpha=0.5) + 
-  geom_smooth() + 
-  facet_wrap(~target, scales = 'free',ncol=4)
+```{r scatter_plots, fig.height=90, fig.width=7}
+# d = gather(dplyr::select_at(data.pca,c(predictors,output.var.tr)),key=target,value=value,-!!output.var.tr)
+# ggplot(data=d, aes_string(x='value',y=output.var.tr)) + 
+#   geom_point(color='light blue',alpha=0.5) + 
+#   geom_smooth() + 
+#  facet_wrap(~target, scales = 'free',ncol=4)
 ```
 
 
@@ -729,7 +729,7 @@ test.model(model.full, data.test
 
 
 ## Checking with removal of high influence points
-```{r HighInfluenceCheck, cache=T}
+```{r HighInfluenceCheck}
 high.cd = names(cd.full[cd.full > 4/nrow(data.train)])
 
 #save dataset with high.cd flagged
@@ -785,7 +785,7 @@ ggplot(mm,aes(x=type, y=value)) +
 ```
 
 
-```{r High Leverage plot, fig.height=40, cache=T}
+```{r High Leverage plot, fig.height=40}
 # Distribution (box) Plots
 mm = melt(plotData, id=c('type'))
 
@@ -861,7 +861,7 @@ if (algo.backward.caret == TRUE){
 
 ### Stepwise Selection with CV 
 #### Train
-```{r Stepwise,fig.height=5,cache=T}
+```{r Stepwise,fig.height=5}
 if (algo.stepwise.caret == TRUE){
   set.seed(1)
   returned = train.caret.glmselect(formula = formula
